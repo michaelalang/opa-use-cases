@@ -1,0 +1,40 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: denyrouteperdomainpolicy
+spec:
+  crd:
+    spec:
+      names:
+        kind: DenyRoutePerDomainPolicy
+      validation:
+        legacySchema: true
+  targets:
+    - rego: |
+        package DenyRoutePerDomainPolicy
+        privileged(userInfo, allowedUsers, _) {
+          # Allow if the user is in allowedUsers.
+          username := object.get(userInfo, "username", "")
+          allowedUsers[_] == username
+        } 
+        privileged(userInfo, _, allowedGroups) {
+          # Allow if the user's groups intersect allowedGroups.
+          userGroups := object.get(userInfo, "groups", [])
+          groups := {g | g := userGroups[_]}
+          allowed := {g | g := allowedGroups[_]}
+          intersection := groups & allowed
+          count(intersection) > 0
+        }
+        violation[{"msg": msg}] {
+          params := object.get(input, "parameters", {})
+          routeName := input.review.object.spec.host
+          idx := indexof(routeName, ".")
+          domain := substring(routeName, idx + 1, count(routeName))
+          allowedUsers := object.get(params[domain], "allowedUsers", [])
+          allowedGroups := object.get(params[domain], "allowedGroups", [])
+          input.review.kind.kind == "Route"
+          not privileged(input.review.userInfo, allowedUsers, allowedGroups)
+          msg := sprintf("User %v is not allowed to create/modify Route %v in domain %v %v %v", 
+                         [input.review.userInfo.username, routeName, domain, allowedUsers, allowedGroups])
+        }
+      target: admission.k8s.gatekeeper.sh

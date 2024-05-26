@@ -1,0 +1,42 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: test1
+spec:
+  host: host.example.com
+  port:
+    targetPort: http-8080
+  to:
+    kind: Service
+    name: mockbin
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: test2
+spec:
+  host: host.subdomain.example.com
+  port:
+    targetPort: http-8080
+  to:
+    kind: Service
+    name: mockbin
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: test3
+spec:
+  host: host.somedomain.com
+  port:
+    targetPort: http-8080
+  to:
+    kind: Service
+    name: mockbin
+    weight: 100
+  wildcardPolicy: None
+---

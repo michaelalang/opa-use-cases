@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: global-policy
+spec:
+  podSelector: {}
+  policyTypes: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: users-policy
+spec:
+  podSelector: {}
+  policyTypes: []
+---
+
