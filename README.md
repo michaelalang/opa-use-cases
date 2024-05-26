@@ -255,7 +255,7 @@ In this use-case we want to ensure that Users cannot create Routes in domains th
     The given example Constraint ensures:
     * Only Users in the Group `example.com` can create Routes for that example.com domain
     * User `admin` can create Routes even if not in Group `example.com` 
-    * Only Users in the Group `somdomain.com` can create Route for the somdomain.com domain
+    * Only Users in the Group `somedomain.com` can create Route for the somedomain.com domain
     * User `admin` can create Routes even if not in Group `somedomain.com` 
     * not configured domains are always rejected
 
