@@ -11,9 +11,9 @@ spec:
         kinds:
           - Route
   parameters:
-    "example.com":
+    example.com:
       allowedGroups: ["example.com"]
       allowedUsers: ["admin"]
-    "somedomain.com":
+    somedomain.com:
       allowedGroups: ["somedomain.com"]
       allowedUsers: ["admin"]

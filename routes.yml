@@ -40,3 +40,18 @@ spec:
     weight: 100
   wildcardPolicy: None
 ---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: test4
+spec:
+  host: host.xxx.xx
+  port:
+    targetPort: http-8080
+  to:
+    kind: Service
+    name: mockbin
+    weight: 100
+  wildcardPolicy: None
+---
+

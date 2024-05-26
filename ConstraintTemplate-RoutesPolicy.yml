@@ -30,6 +30,16 @@ spec:
           routeName := input.review.object.spec.host
           idx := indexof(routeName, ".")
           domain := substring(routeName, idx + 1, count(routeName))
+          input.review.kind.kind == "Route"
+          not params[domain]
+          msg := sprintf("User %v is not allowed to create/modify Route %v in domain %v",
+                         [input.review.userInfo.username, routeName, domain])
+        }
+        violation[{"msg": msg}] {
+          params := object.get(input, "parameters", {})
+          routeName := input.review.object.spec.host
+          idx := indexof(routeName, ".")
+          domain := substring(routeName, idx + 1, count(routeName))
           allowedUsers := object.get(params[domain], "allowedUsers", [])
           allowedGroups := object.get(params[domain], "allowedGroups", [])
           input.review.kind.kind == "Route"

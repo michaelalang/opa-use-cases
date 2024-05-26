@@ -180,15 +180,11 @@ In this use-case we want to ensure that Users cannot create Routes in domains th
             package DenyRoutePerDomainPolicy
             privileged(userInfo, allowedUsers, _) {
               # Allow if the user is in allowedUsers.
-              # Use object.get so omitted parameters can't cause policy bypass by
-              # evaluating to undefined.
               username := object.get(userInfo, "username", "")
               allowedUsers[_] == username
             } 
             privileged(userInfo, _, allowedGroups) {
               # Allow if the user's groups intersect allowedGroups.
-              # Use object.get so omitted parameters can't cause policy bypass by
-              # evaluating to undefined.
               userGroups := object.get(userInfo, "groups", [])
               groups := {g | g := userGroups[_]}
               allowed := {g | g := allowedGroups[_]}
@@ -201,11 +197,21 @@ In this use-case we want to ensure that Users cannot create Routes in domains th
               idx := indexof(routeName, ".")
               domain := substring(routeName, idx + 1, count(routeName))
               input.review.kind.kind == "Route"
+              not params[domain]
+              msg := sprintf("User %v is not allowed to create/modify Route %v in domain %v",
+                             [input.review.userInfo.username, routeName, domain])
+            }
+            violation[{"msg": msg}] {
+              params := object.get(input, "parameters", {})
+              routeName := input.review.object.spec.host
+              idx := indexof(routeName, ".")
+              domain := substring(routeName, idx + 1, count(routeName))
               allowedUsers := object.get(params[domain], "allowedUsers", [])
               allowedGroups := object.get(params[domain], "allowedGroups", [])
+              input.review.kind.kind == "Route"
               not privileged(input.review.userInfo, allowedUsers, allowedGroups)
-              msg := sprintf("User %v is not allowed to create/modify Route %v in domain %v", 
-                             [input.review.userInfo.username, routeName, domain])
+              msg := sprintf("User %v is not allowed to create/modify Route %v in domain %v %v %v", 
+                             [input.review.userInfo.username, routeName, domain, allowedUsers, allowedGroups])
             }
           target: admission.k8s.gatekeeper.sh
     EOF
@@ -247,11 +253,11 @@ In this use-case we want to ensure that Users cannot create Routes in domains th
     ```
 
     The given example Constraint ensures:
-    * Only Users in the Group `exampl.com` can create Routes for that example.com domain
+    * Only Users in the Group `example.com` can create Routes for that example.com domain
     * User `admin` can create Routes even if not in Group `example.com` 
     * Only Users in the Group `somdomain.com` can create Route for the somdomain.com domain
     * User `admin` can create Routes even if not in Group `somedomain.com` 
-    * not configured domains are always granted (no catch all deny)
+    * not configured domains are always rejected
 
 * Verify that a User not in the Group `example.com` cannot create/modify/delete Routes with `spec.host` in that domain
 
@@ -298,16 +304,27 @@ In this use-case we want to ensure that Users cannot create Routes in domains th
         name: mockbin
         weight: 100
       wildcardPolicy: None
+    ---
+    apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: test4
+    spec:
+      host: host.xxx.xx
+      port:
+        targetPort: http-8080
+      to:
+        kind: Service
+        name: mockbin
+        weight: 100
+      wildcardPolicy: None
     EOF
 
-    # expected response
-    # Route 1 reject since the user isn't part of group or user list
-    # Route 2 accepted since not defined
-    # Route 3 reject since the user isn't part of group or user list
-
-    route.route.openshift.io/test2 created
-    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.example.com in domain example.com ["admin"] ["example.com"]
-    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.somedomain.com in domain somedomain.com ["admin"] ["somedomain.com"]
+    # expected response all Routes are rejected since we do not have a User or Group matching
+    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.example.com in domain example.com ["admin"] ["what.example.com"]
+    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.subdomain.example.com in domain subdomain.example.com
+    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.somedomain.com in domain somedomain.com ["admin"] ["else.somedomain.com"]
+    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.xxx.xx in domain xxx.xx
     ```
 
 * Create or update the Groups `example.com` `somedomain.com` 
@@ -376,10 +393,25 @@ In this use-case we want to ensure that Users cannot create Routes in domains th
         name: mockbin
         weight: 100
       wildcardPolicy: None
+    ---     
+    apiVersion: route.openshift.io/v1
+    kind: Route 
+    metadata:
+      name: test4
+    spec:     
+      host: host.xxx.xx
+      port:   
+        targetPort: http-8080
+      to:   
+        kind: Service 
+        name: mockbin
+        weight: 100
+      wildcardPolicy: None
     EOF
 
     # expected output 
     route.route.openshift.io/test1 created
-    route.route.openshift.io/test2 unchanged
     route.route.openshift.io/test3 created
+    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.subdomain.example.com in domain subdomain.example.com
+    Error from server (Forbidden): error when creating "routes.yml": admission webhook "validation.gatekeeper.sh" denied the request: [denyrouterperdomainpolicy] User milang is not allowed to create/modify Route host.xxx.xx in domain xxx.xx
     ``` 
