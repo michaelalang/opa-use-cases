@@ -14,6 +14,9 @@ spec:
     example.com:
       allowedGroups: ["example.com"]
       allowedUsers: ["admin"]
+    apps.example.com:
+      allowedGroups: ["apps.example.com"]
+      allowedUsers: ["admin"]
     somedomain.com:
       allowedGroups: ["somedomain.com"]
       allowedUsers: ["admin"]
